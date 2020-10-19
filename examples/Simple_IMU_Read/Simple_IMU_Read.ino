@@ -22,11 +22,11 @@ void loop() {
 
   Serial.print("Accel: ");
   Serial.print("X ");
-  Serial.print(getAccelX_mss());
+  Serial.print(bmx.getAccelX_mss());
   Serial.print(" Y ");
-  Serial.print(getAccelY_mss());
+  Serial.print(bmx.getAccelY_mss());
   Serial.print(" Z ");
-  Serial.println(getAccelZ_mss());
-  
+  Serial.println(bmx.getAccelZ_mss());
+
   delay(300);
 }
