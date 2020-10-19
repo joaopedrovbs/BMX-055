@@ -22,7 +22,7 @@
 #define BMX055_MAG_DEFAULT_ADDRESS    0x10
 
 /** BMX055 ID **/
-#define BMX055_ACCEL_ID       0xA0
+#define BMX055_ACCEL_ID       0xFA
 #define BMX055_GYRO_ID        0x0F
 #define BMX055_MAG_ID         0x32
 
@@ -30,13 +30,10 @@ class BMX055 {
   public:
 
     /* BMX055 object, input the I2C bus and addresses */
-    BMX055::BMX055(TwoWire &, uint8_t, uint8_t, uint8_t);
+    BMX055(TwoWire &bus, uint8_t, uint8_t, uint8_t);
 
-    int BMX055::begin(void);
+    int begin(void);
 
-    bool BMX055::setAccelRange(BMX055_ACCEL_RANGE_t);
-    bool BMX055::setAccelBandwidth(BMX_ACCEL_DATA_BANDWIDTH_t);
-    bool BMX055::setSleepPeriod(BMX_ACCEL_SLEEP_DUR_t);
 
     typedef enum {
       NORMAL_MODE,      //  All parts held powered-up and data acquisition is performed continuosly
@@ -85,6 +82,18 @@ class BMX055 {
       ACCEL_RANGE_16G   =0x0C
     }BMX055_ACCEL_RANGE_t;
 
+    bool setAccelRange(BMX055_ACCEL_RANGE_t);
+
+    bool setAccelBandwidth(BMX_ACCEL_DATA_BANDWIDTH_t);
+
+    bool setSleepPeriod(BMX_ACCEL_SLEEP_DUR_t);
+
+    void readAccel(void);
+
+    float getAccelX_mss();
+    float getAccelY_mss();
+    float getAccelZ_mss();
+
   private:
     /** BMX055 Registers **/
     typedef enum {
@@ -94,7 +103,7 @@ class BMX055 {
       ACCD_Y_LSB    =0x04,
       ACCD_Y_MSB    =0x05,
       ACCD_Z_LSB    =0x06,
-      ACCD_Z_ZSB    =0x07,
+      ACCD_Z_MSB    =0x07,
       ACCD_TEMP     =0x08,
       INT_STATUS_0  =0x09,
       INT_STATUS_1  =0x0A,
@@ -153,14 +162,20 @@ class BMX055 {
     uint8_t _gyroAddress;
     uint8_t _magAddress;
 
-    bool BMX055::writeAccelRegister(BMX055_Accel_reg_t , uint8_t );
-    uint8_t BMX055::readAccelRegisters(BMX055_Accel_reg_t);
+    BMX055_ACCEL_RANGE_t rangeBuffer;
+    
+    float _ax, _ay, _az;
+    float _gx, _gy, _gz;
+    float _hx, _hy, _hz;
 
-    bool BMX055::writeGyroRegister(BMX055_Gyro_reg_t regAddress, uint8_t data);
-    uint8_t BMX055::readGyroRegisters(BMX055_Gyro_reg_t regAddress);
+    bool writeAccelRegister(BMX055_Accel_reg_t , uint8_t );
+    uint8_t readAccelRegisters(BMX055_Accel_reg_t);
 
-    bool BMX055::writeMagRegister(BMX055_Mag_reg_t regAddress, uint8_t data);
-    uint8_t BMX055::readMagRegisters(BMX055_Mag_reg_t regAddress);
-}
+    // bool writeGyroRegister(BMX055_Gyro_reg_t regAddress, uint8_t data);
+    // uint8_t readGyroRegisters(BMX055_Gyro_reg_t regAddress);
+
+    // bool writeMagRegister(BMX055_Mag_reg_t regAddress, uint8_t data);
+    // uint8_t readMagRegisters(BMX055_Mag_reg_t regAddress);
+};
 
 #endif
