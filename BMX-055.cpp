@@ -13,7 +13,7 @@ BMX055::BMX055(
   _magAddress = addressMag;     // I2C Mag Address
 }
 
-/* starts communication with the MPU-9250 */
+/* starts communication with the BMX055 */
 int BMX055::begin(){
     // starting the I2C bus
     _i2c->begin();
@@ -35,6 +35,7 @@ int BMX055::begin(){
   return 1;
 }
 
+// Sets the range for accelerometer measurements
 bool BMX055::setAccelRange(BMX055_ACCEL_RANGE_t range){
   rangeBuffer = range;
   if(!writeAccelRegister(PMU_RANGE, range)){
@@ -43,6 +44,7 @@ bool BMX055::setAccelRange(BMX055_ACCEL_RANGE_t range){
   return true;
 }
 
+// Sets the Bandwidth for the Low Pass Filter
 bool BMX055::setAccelBandwidth(BMX_ACCEL_DATA_BANDWIDTH_t bandwidth){
   if(!writeAccelRegister(PMU_BW, bandwidth)){
     return false;
@@ -50,6 +52,7 @@ bool BMX055::setAccelBandwidth(BMX_ACCEL_DATA_BANDWIDTH_t bandwidth){
   return true;
 }
 
+// Sets the duration of the sleep period during 
 bool BMX055::setSleepPeriod(BMX_ACCEL_SLEEP_DUR_t duration){
   if(!writeAccelRegister(PMU_LPW, duration)){
     return false;
@@ -57,8 +60,9 @@ bool BMX055::setSleepPeriod(BMX_ACCEL_SLEEP_DUR_t duration){
   return true;
 }
 
+// Performs accelerometer read and conversion
 void BMX055::readAccel(void){
-  // Buffer for raw 8-bit data
+  // Buffers for raw 8-bit data
   uint8_t xRawData[2];
   uint8_t yRawData[2];
   uint8_t zRawData[2];
@@ -108,23 +112,27 @@ void BMX055::readAccel(void){
   if (rangeBuffer == ACCEL_RANGE_16G)
     divider = 128;
 
+  // Save to local values
   _ax = (float)accelX12Bit/divider;
   _ay = (float)accelY12Bit/divider;
   _az = (float)accelZ12Bit/divider;
 
 }
 
+// returns the accelerometer measurement in the x direction, m/s^2 
 float BMX055::getAccelX_mss(void){
-  return _ax;
+  return _ax*G;
 }
+// returns the accelerometer measurement in the y direction, m/s^2 
 float BMX055::getAccelY_mss(void){
-  return _ay;
+  return _ay*G;
 }
+// returns the accelerometer measurement in the z direction, m/s^2 
 float BMX055::getAccelZ_mss(void){
-  return _az;
+  return _az*G;
 }
 
-/* writes a byte to BMX055 register given a register address and data */
+/* writes a byte to BMX055 Accelerometer register given a register address and data */
 bool BMX055::writeAccelRegister(BMX055_Accel_reg_t regAddress, uint8_t data){
   /* write data to device */
   _i2c->beginTransmission((uint8_t)_accelAddress); // open the device
@@ -139,7 +147,7 @@ bool BMX055::writeAccelRegister(BMX055_Accel_reg_t regAddress, uint8_t data){
   return false;
 }
 
-/* reads registers from BMX055 given a starting register address, number of bytes, and a pointer to store data */
+/* reads registers from BMX055 Accelerometer given a starting register address, number of bytes, and a pointer to store data */
 uint8_t BMX055::readAccelRegisters(BMX055_Accel_reg_t regAddress){
   _i2c->beginTransmission((uint8_t)_accelAddress); // open the device
   _i2c->write(regAddress); // specify the starting register address

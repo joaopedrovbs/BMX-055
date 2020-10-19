@@ -168,6 +168,8 @@ class BMX055 {
     float _gx, _gy, _gz;
     float _hx, _hy, _hz;
 
+    const float G = 9.807f;
+    
     bool writeAccelRegister(BMX055_Accel_reg_t , uint8_t );
     uint8_t readAccelRegisters(BMX055_Accel_reg_t);
 
