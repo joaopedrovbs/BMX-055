@@ -28,5 +28,25 @@ void loop() {
   Serial.print(" Z ");
   Serial.println(bmx.getAccelZ_mss());
 
-  delay(300);
+  bmx.readGyro();
+
+  Serial.print("Gyro: ");
+  Serial.print("X ");
+  Serial.print(bmx.getGyroX_degs());
+  Serial.print(" Y ");
+  Serial.print(bmx.getGyroY_degs());
+  Serial.print(" Z ");
+  Serial.println(bmx.getGyroZ_degs());
+  
+  bmx.readMag();
+
+  Serial.print("Mag: ");
+  Serial.print("X ");
+  Serial.print(bmx.getMagX_uT());
+  Serial.print(" Y ");
+  Serial.print(bmx.getMagY_uT());
+  Serial.print(" Z ");
+  Serial.println(bmx.getMagZ_uT());
+
+  delay(200);
 }

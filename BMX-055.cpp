@@ -28,16 +28,55 @@ int BMX055::begin(){
       return -2;
     }
 
-    if(!setSleepPeriod(MS_1)){
+    if(!setAccelBandwidth(HZ_7_81)){
       return -3;
     }
+
+    if(!setAccelSleepPeriod(MS_1)){
+      return -4;
+    }
+
+    delay(100);
+
+    if(!(readGyroRegisters(GYR_CHIP_ID) == BMX055_GYRO_ID)){
+      return -5;
+    }
+
+    if(!setGyroRange(GYRO_RANGE_1000)){
+      return -6;
+    }
+
+    if(!setGyroBandwidth(ODR_100_BDW_12)){
+      return -7;
+    }
+
+    if(!setGyroPowerMode(GYRO_NORMAL_MODE, GYRO_2_MS)){
+      return -8;
+    }
+
+    if(!setMagOn()){
+      return -9;
+    }
+
+    if(!setMagODR()){
+      return -10;
+    }
+
+    if(!enableMagAxis()){
+      return -11;
+    }
+    
+    if(!setMagRepetition()){
+      return -12;
+    }
+
   // successful init, return 1
   return 1;
 }
 
 // Sets the range for accelerometer measurements
 bool BMX055::setAccelRange(BMX055_ACCEL_RANGE_t range){
-  rangeBuffer = range;
+  accelRangeBuffer = range;
   if(!writeAccelRegister(PMU_RANGE, range)){
     return false;
   }
@@ -53,7 +92,7 @@ bool BMX055::setAccelBandwidth(BMX_ACCEL_DATA_BANDWIDTH_t bandwidth){
 }
 
 // Sets the duration of the sleep period during 
-bool BMX055::setSleepPeriod(BMX_ACCEL_SLEEP_DUR_t duration){
+bool BMX055::setAccelSleepPeriod(BMX_ACCEL_SLEEP_DUR_t duration){
   if(!writeAccelRegister(PMU_LPW, duration)){
     return false;
   }
@@ -103,13 +142,13 @@ void BMX055::readAccel(void){
   uint16_t divider = 1;
 
   // Sensitivity Scale from the datasheet
-  if (rangeBuffer == ACCEL_RANGE_2G)
+  if (accelRangeBuffer == ACCEL_RANGE_2G)
     divider = 1024;
-  if (rangeBuffer == ACCEL_RANGE_4G)
+  else if (accelRangeBuffer == ACCEL_RANGE_4G)
     divider = 512;
-  if (rangeBuffer == ACCEL_RANGE_8G)
+  else if (accelRangeBuffer == ACCEL_RANGE_8G)
     divider = 256;
-  if (rangeBuffer == ACCEL_RANGE_16G)
+  else if (accelRangeBuffer == ACCEL_RANGE_16G)
     divider = 128;
 
   // Save to local values
@@ -132,12 +171,199 @@ float BMX055::getAccelZ_mss(void){
   return _az*G;
 }
 
+// Gyro
+
+bool BMX055::setGyroRange(BMX055_GYRO_RANGE_t range){
+  gyroRangeBuffer = range;
+  if(!writeGyroRegister(GYR_RANGE, range)){
+    return false;
+  }
+  return true;
+}
+
+bool BMX055::setGyroBandwidth(BMX_GYRO_DATA_BANDWIDTH_t bandwidth){
+  if(!writeGyroRegister(GYR_BW, bandwidth)){
+    return false;
+  }
+  return true;
+}
+
+bool BMX055::setGyroPowerMode(BMX055_GYRO_POWER_MODES_t powerMode, BMX_GYRO_SLEEP_DUR_t sleepDuration){
+  if(!writeGyroRegister(GYR_LPM1, (powerMode | sleepDuration))){
+    return false;
+  }
+    return true;
+}
+
+void BMX055::readGyro(void){
+    // Buffers for raw 8-bit data
+  uint8_t xRawData[2];
+  uint8_t yRawData[2];
+  uint8_t zRawData[2];
+  
+  // Reading registers
+  xRawData[0] = readGyroRegisters(GYR_RATE_X_LSB);
+  xRawData[1] = readGyroRegisters(GYR_RATE_X_MSB);
+  
+   // Reading registers
+  yRawData[0] = readGyroRegisters(GYR_RATE_Y_LSB);
+  yRawData[1] = readGyroRegisters(GYR_RATE_Y_MSB);
+
+   // Reading registers
+  zRawData[0] = readGyroRegisters(GYR_RATE_Z_LSB);
+  zRawData[1] = readGyroRegisters(GYR_RATE_Z_MSB);
+
+  // Converting registers to 12 bit variables
+  int32_t gyroX = ((xRawData[1] << 8) | (xRawData[0]));
+  int32_t gyroY = ((yRawData[1] << 8) | (yRawData[0]));
+  int32_t gyroZ = ((zRawData[1] << 8) | (zRawData[0]));
+
+  // Convert data into a + and - range
+  if (gyroX > 32767)
+  {
+    gyroX -= 65536;
+  }
+   // Convert data into a + and - range
+  if (gyroY > 32767)
+  {
+    gyroY -= 65536;
+  }
+   // Convert data into a + and - range
+  if (gyroZ > 32767)
+  {
+    gyroZ -= 65536;
+  }
+
+  float divider = 1;
+
+  // Sensitivity Scale from the datasheet
+  if (gyroRangeBuffer == GYRO_RANGE_125)
+    divider = 262.4;
+  else if (gyroRangeBuffer == GYRO_RANGE_250)
+    divider = 131.2;
+  else if (gyroRangeBuffer == GYRO_RANGE_500)
+    divider = 65.6;
+  else if (gyroRangeBuffer == GYRO_RANGE_1000)
+    divider = 32.8;
+  else if (gyroRangeBuffer == GYRO_RANGE_2000)
+    divider = 16.4;
+
+  // Save to local values
+  _gx = (float)gyroX/divider;
+  _gy = (float)gyroY/divider;
+  _gz = (float)gyroZ/divider;
+
+}
+
+float BMX055::getGyroX_degs(){
+  return _gx;
+}
+float BMX055::getGyroY_degs(){
+  return _gy;
+}
+float BMX055::getGyroZ_degs(){
+  return _gz;
+}
+
+// Magnetometer
+
+bool BMX055::setMagOn(void){
+  if(!writeMagRegister(MAG_PWR_CTRL_SR, 0x83)){
+    return false;
+  }
+  return true;
+}
+
+bool BMX055::setMagODR(void){
+  if(!writeMagRegister(MAG_OM_ODR_SELF, 0x00)){
+    return false;
+  }
+  return true;
+}
+
+bool BMX055::enableMagAxis(void){
+  if(!writeMagRegister(MAG_INT_REG_1, 0x84)){
+    return false;
+  }
+    return true;
+}
+
+bool BMX055::setMagRepetition(void){
+  if(!writeMagRegister(MAG_REP_CTRL_XY, 0x0F)){
+    return false;
+  }
+  if(!writeMagRegister(MAG_REP_CTRL_Z, 0x0F)){
+    return false;
+  }
+    return true;
+}
+
+void BMX055::readMag(void){
+    // Buffers for raw 8-bit data
+  uint8_t xRawData[2];
+  uint8_t yRawData[2];
+  uint8_t zRawData[2];
+  
+  // Reading registers
+  xRawData[0] = readMagRegisters(MAG_X_LSB);
+  xRawData[1] = readMagRegisters(MAG_X_MSB);
+  
+   // Reading registers
+  yRawData[0] = readMagRegisters(MAG_Y_LSB);
+  yRawData[1] = readMagRegisters(MAG_Y_MSB);
+
+   // Reading registers
+  zRawData[0] = readMagRegisters(MAG_Z_LSB);
+  zRawData[1] = readMagRegisters(MAG_Z_MSB);
+
+  // Converting registers to 12 bit variables
+  int16_t magX = (((xRawData[1] << 8) | (xRawData[0] & 0xF8) ) >> 3);
+  int16_t magY = (((yRawData[1] << 8) | (xRawData[0] & 0xF8) ) >> 3);
+  int16_t magZ = (((zRawData[1] << 8) | (xRawData[0] & 0xFE) ) >> 1);
+
+  // Convert data into a + and - range
+  if (magX > 4095)
+  {
+    magX -= 8192;
+  }
+   // Convert data into a + and - range
+  if (magY > 4095)
+  {
+    magY -= 8192;
+  }
+   // Convert data into a + and - range
+  if (magZ > 16383)
+  {
+    magZ -= 32768;
+  }
+
+  float divider = 16;
+
+  // Save to local values
+  _mx = (float)magX/divider;
+  _my = (float)magY/divider;
+  _mz = (float)magZ/divider;
+
+}
+
+float BMX055::getMagX_uT(){
+  return _mx;
+}
+float BMX055::getMagY_uT(){
+  return _my;
+}
+float BMX055::getMagZ_uT(){
+  return _mz;
+}
+
+// Private Functions
+
 /* writes a byte to BMX055 Accelerometer register given a register address and data */
 bool BMX055::writeAccelRegister(BMX055_Accel_reg_t regAddress, uint8_t data){
   /* write data to device */
   _i2c->beginTransmission((uint8_t)_accelAddress); // open the device
-  _i2c->write(regAddress); // write the register address
-  _i2c->write(data); // write the data
+  _i2c->write((uint8_t)regAddress); // write the register address
+  _i2c->write((uint8_t)data); // write the data
   _i2c->endTransmission();
 
   /* check the read back register against the written register */
@@ -150,56 +376,56 @@ bool BMX055::writeAccelRegister(BMX055_Accel_reg_t regAddress, uint8_t data){
 /* reads registers from BMX055 Accelerometer given a starting register address, number of bytes, and a pointer to store data */
 uint8_t BMX055::readAccelRegisters(BMX055_Accel_reg_t regAddress){
   _i2c->beginTransmission((uint8_t)_accelAddress); // open the device
-  _i2c->write(regAddress); // specify the starting register address
+  _i2c->write((uint8_t)regAddress); // specify the starting register address
   _i2c->endTransmission(false);
-  _i2c->requestFrom(_accelAddress, (uint8_t)1); // specify the number of bytes to receive
+  _i2c->requestFrom((int)_accelAddress, (int)1); // specify the number of bytes to receive
   return _i2c->read();
 }
 
-// /* writes a byte to BMX055 register given a register address and data */
-// bool BMX055::writeGyroRegister(BMX055_reg_t regAddress, uint8_t data){
-//   /* write data to device */
-//   _i2c->beginTransmission((uint8_t)_gyroAddress); // open the device
-//   _i2c->write(regAddress); // write the register address
-//   _i2c->write(data); // write the data
-//   _i2c->endTransmission();
+//////////////////////////////////////
+// Gyro 
+//////////////////////////////////////
 
-//   /* check the read back register against the written register */
-//   if(readGyroRegisters(regAddress) == data) {
-//     return true;
-//   }
-//   return false;
-// }
-// /* reads registers from BMX055 given a starting register address, number of bytes, and a pointer to store data */
-// uint8_t BMX055::readGyroRegisters(BMX055_reg_t regAddress){
-//   _i2c->beginTransmission(_gyroAddress); // open the device
-//   _i2c->write(regAddress); // specify the starting register address
-//   _i2c->endTransmission(false);
-//   _i2c->requestFrom(_gyroAddress, 1); // specify the number of bytes to receive
-//   return _i2c->read();
-// }
+/* writes a byte to BMX055 register given a register address and data */
+bool BMX055::writeGyroRegister(BMX055_Gyro_reg_t regAddress, uint8_t data){
+  /* write data to device */
+  _i2c->beginTransmission(_gyroAddress); // open the device
+  _i2c->write((uint8_t)regAddress); // write the register address
+  _i2c->write(data); // write the data
+  _i2c->endTransmission();
 
-// /* writes a byte to BMX055 register given a register address and data */
-// bool BMX055::writeMagRegister(BMX055_reg_t regAddress, uint8_t data){
-//   /* write data to device */
-//   _i2c->beginTransmission((uint8_t)_magAddress); // open the device
-//   _i2c->write(regAddress); // write the register address
-//   _i2c->write(data); // write the data
-//   _i2c->endTransmission();
+  return true;
+}
 
-//   /* check the read back register against the written register */
-//   if(readMagRegisters(regAddress) == data) {
-//     return true;
-//   }
-//   return false;
-// }
+/* reads registers from BMX055 given a starting register address, number of bytes, and a pointer to store data */
+uint8_t BMX055::readGyroRegisters(BMX055_Gyro_reg_t regAddress){
+  _i2c->beginTransmission(_gyroAddress); // open the device
+  _i2c->write((uint8_t)regAddress); // specify the starting register address
+  _i2c->endTransmission(false);
+  _i2c->requestFrom((int)_gyroAddress, (int)1); // specify the number of bytes to receive
+  return (_i2c->read());
+}
 
-// /* reads registers from BMX055 given a starting register address, number of bytes, and a pointer to store data */
-// uint8_t BMX055::readMagRegisters(BMX055_reg_t regAddress){
-//   _i2c->beginTransmission(_magAddress); // open the device
-//   _i2c->write(regAddress); // specify the starting register address
-//   _i2c->endTransmission(false);
-//   _i2c->requestFrom(_magAddress, 1); // specify the number of bytes to receive
-//   return _i2c->read();
-// }
+//////////////////////////////////////
+// Mag
+//////////////////////////////////////
 
+/* writes a byte to BMX055 register given a register address and data */
+bool BMX055::writeMagRegister(BMX055_Mag_reg_t regAddress, uint8_t data){
+  /* write data to device */
+  _i2c->beginTransmission((uint8_t)_magAddress); // open the device
+  _i2c->write((uint8_t)regAddress); // write the register address
+  _i2c->write(data); // write the data
+  _i2c->endTransmission();
+
+  return true;
+}
+
+/* reads registers from BMX055 given a starting register address, number of bytes, and a pointer to store data */
+uint8_t BMX055::readMagRegisters(BMX055_Mag_reg_t regAddress){
+  _i2c->beginTransmission((uint8_t)_magAddress); // open the device
+  _i2c->write((uint8_t)regAddress); // specify the starting register address
+  _i2c->endTransmission(false);
+  _i2c->requestFrom((int)_magAddress, (int)1); // specify the number of bytes to receive
+  return _i2c->read();
+}
